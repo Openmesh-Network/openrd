@@ -62,8 +62,8 @@ contract Tasks is TasksUtils {
         PreapprovedApplication[] calldata _preapprove
     ) external payable returns (uint256 taskId) {
         _ensureNotDisabled();
-        taskId = taskCounter++;
 
+        taskId = taskCounter++;
         Task storage task = tasks[taskId];
         task.metadata = _metadata;
         task.deadline = _deadline;
@@ -76,6 +76,7 @@ contract Tasks is TasksUtils {
             if (msg.value != 0) {
                 task.nativeBudget = _toUint96(msg.value);
             }
+
             // Gas optimization
             if (_budget.length != 0) {
                 task.budgetCount = _toUint8(_budget.length);
@@ -96,16 +97,16 @@ contract Tasks is TasksUtils {
         }
 
         task.manager = _manager;
-        task.creator = msg.sender;
         if (_disputeManager != address(0)) {
             task.disputeManager = _disputeManager;
         }
+        task.creator = msg.sender;
 
         // Default values are already correct (save gas)
         // task.state = TaskState.Open;
 
         emit TaskCreated(
-            taskId, _metadata, _deadline, _budget, _toUint96(msg.value), msg.sender, _manager, _disputeManager
+            taskId, _metadata, _deadline, _manager, _disputeManager, msg.sender, _toUint96(msg.value), _budget
         );
 
         // Gas optimization
@@ -116,10 +117,9 @@ contract Tasks is TasksUtils {
                 application.applicant = _preapprove[i].applicant;
                 application.accepted = true;
                 _ensureRewardEndsWithNextToken(_preapprove[i].reward);
-                _setRewardBellowBudget(task, application, _preapprove[i].reward, _preapprove[i].nativeReward);
+                _setRewardBellowBudget(task, application, _preapprove[i].nativeReward, _preapprove[i].reward);
 
-                emit ApplicationCreated(taskId, i, "", _preapprove[i].reward, _preapprove[i].nativeReward);
-
+                emit ApplicationCreated(taskId, i, "", _preapprove[i].nativeReward, _preapprove[i].reward);
                 emit ApplicationAccepted(taskId, i);
 
                 unchecked {
@@ -133,28 +133,18 @@ contract Tasks is TasksUtils {
     function applyForTask(
         uint256 _taskId,
         string calldata _metadata,
-        Reward[] calldata _reward,
-        NativeReward[] calldata _nativeReward
+        NativeReward[] calldata _nativeReward,
+        Reward[] calldata _reward
     ) external returns (uint32 applicationId) {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsOpen(task);
         _ensureRewardEndsWithNextToken(_reward);
 
-        Application storage application = task.applications[task.applicationCount];
+        applicationId = task.applicationCount++;
+        Application storage application = task.applications[applicationId];
         application.metadata = _metadata;
         application.applicant = msg.sender;
-
-        // Gas optimization
-        if (_reward.length != 0) {
-            application.rewardCount = _toUint8(_reward.length);
-            for (uint8 i; i < uint8(_reward.length);) {
-                application.reward[i] = _reward[i];
-                unchecked {
-                    ++i;
-                }
-            }
-        }
 
         // Gas optimization
         if (_nativeReward.length != 0) {
@@ -167,9 +157,18 @@ contract Tasks is TasksUtils {
             }
         }
 
-        applicationId = task.applicationCount++;
+        // Gas optimization
+        if (_reward.length != 0) {
+            application.rewardCount = _toUint8(_reward.length);
+            for (uint8 i; i < uint8(_reward.length);) {
+                application.reward[i] = _reward[i];
+                unchecked {
+                    ++i;
+                }
+            }
+        }
 
-        emit ApplicationCreated(_taskId, applicationId, _metadata, _reward, _nativeReward);
+        emit ApplicationCreated(_taskId, applicationId, _metadata, _nativeReward, _reward);
     }
 
     /// @inheritdoc ITasks
@@ -185,10 +184,10 @@ contract Tasks is TasksUtils {
             Application storage application = task.applications[_applicationIds[i]];
             _ensureRewardBellowBudget(
                 task,
-                application.rewardCount,
                 application.nativeRewardCount,
-                application.reward,
-                application.nativeReward
+                application.rewardCount,
+                application.nativeReward,
+                application.reward
             );
             application.accepted = true;
 
@@ -224,9 +223,9 @@ contract Tasks is TasksUtils {
         _ensureTaskIsTaken(task);
         _ensureSenderIsExecutor(task);
 
-        Submission storage submission = task.submissions[task.submissionCount];
-        submission.metadata = _metadata;
         submissionId = task.submissionCount++;
+        Submission storage submission = task.submissions[submissionId];
+        submission.metadata = _metadata;
 
         emit SubmissionCreated(_taskId, submissionId, _metadata);
     }
@@ -276,9 +275,9 @@ contract Tasks is TasksUtils {
             cancelTaskRequestId = type(uint8).max;
         } else {
             // Task is taken and deadline has not past
-            CancelTaskRequest storage request = task.cancelTaskRequests[task.cancelTaskRequestCount];
-            request.explanation = _explanation;
             cancelTaskRequestId = task.cancelTaskRequestCount++; // Will overflow if it would be max (guarantees max means no request)
+            CancelTaskRequest storage request = task.cancelTaskRequests[cancelTaskRequestId];
+            request.explanation = _explanation;
 
             emit CancelTaskRequested(_taskId, cancelTaskRequestId, _explanation);
         }
@@ -357,8 +356,8 @@ contract Tasks is TasksUtils {
 
         _ensureTaskIsOpen(task);
 
-        _increaseBudget(task, _increase);
         _increaseNativeBudget(task);
+        _increaseBudget(task, _increase);
 
         emit BudgetChanged(_taskId);
     }
@@ -379,8 +378,8 @@ contract Tasks is TasksUtils {
     /// @inheritdoc ITasks
     function completeByDispute(
         uint256 _taskId,
-        uint88[] calldata _partialReward,
-        uint96[] calldata _partialNativeReward
+        uint96[] calldata _partialNativeReward,
+        uint88[] calldata _partialReward
     ) external {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
@@ -388,15 +387,15 @@ contract Tasks is TasksUtils {
 
         _ensureTaskIsTaken(task);
 
-        _payoutTaskPartially(task, _partialReward, _partialNativeReward);
+        _payoutTaskPartially(task, _partialNativeReward, _partialReward);
         _refundCreator(task);
 
-        emit PartialPayment(_taskId, _partialReward, _partialNativeReward);
+        emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
         emit TaskCompleted(_taskId, TaskCompletion.Dispute);
     }
 
     /// @inheritdoc ITasks
-    function partialPayment(uint256 _taskId, uint88[] calldata _partialReward, uint96[] calldata _partialNativeReward)
+    function partialPayment(uint256 _taskId, uint96[] calldata _partialNativeReward, uint88[] calldata _partialReward)
         external
     {
         _ensureNotDisabled();
@@ -405,10 +404,10 @@ contract Tasks is TasksUtils {
 
         _ensureTaskIsTaken(task);
 
-        _payoutTaskPartially(task, _partialReward, _partialNativeReward);
+        _payoutTaskPartially(task, _partialNativeReward, _partialReward);
 
         emit BudgetChanged(_taskId);
-        emit PartialPayment(_taskId, _partialReward, _partialNativeReward);
+        emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
     }
 
     /// @inheritdoc ITasks

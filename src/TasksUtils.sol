@@ -38,17 +38,17 @@ abstract contract TasksUtils is TasksEnsure {
             offchainTask.applications[i].applicant = application.applicant;
             offchainTask.applications[i].accepted = application.accepted;
 
-            offchainTask.applications[i].reward = new Reward[](application.rewardCount);
-            for (uint8 j; j < offchainTask.applications[i].reward.length;) {
-                offchainTask.applications[i].reward[j] = application.reward[j];
+            offchainTask.applications[i].nativeReward = new NativeReward[](application.nativeRewardCount);
+            for (uint8 j; j < offchainTask.applications[i].nativeReward.length;) {
+                offchainTask.applications[i].nativeReward[j] = application.nativeReward[j];
                 unchecked {
                     ++j;
                 }
             }
 
-            offchainTask.applications[i].nativeReward = new NativeReward[](application.nativeRewardCount);
-            for (uint8 j; j < offchainTask.applications[i].nativeReward.length;) {
-                offchainTask.applications[i].nativeReward[j] = application.nativeReward[j];
+            offchainTask.applications[i].reward = new Reward[](application.rewardCount);
+            for (uint8 j; j < offchainTask.applications[i].reward.length;) {
+                offchainTask.applications[i].reward[j] = application.reward[j];
                 unchecked {
                     ++j;
                 }
@@ -77,11 +77,29 @@ abstract contract TasksUtils is TasksEnsure {
 
     function _ensureRewardBellowBudget(
         Task storage task,
-        uint8 _length,
         uint8 _nativeLength,
-        mapping(uint8 => Reward) storage _reward,
-        mapping(uint8 => NativeReward) storage _nativeReward
+        uint8 _length,
+        mapping(uint8 => NativeReward) storage _nativeReward,
+        mapping(uint8 => Reward) storage _reward
     ) internal view {
+        // Gas optimzation
+        if (_nativeLength != 0) {
+            uint256 needed;
+            for (uint8 i; i < _nativeLength;) {
+                unchecked {
+                    needed += _nativeReward[i].amount;
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
+
+            if (needed > task.nativeBudget) {
+                revert RewardAboveBudget();
+            }
+        }
+
         // Gas optimzation
         if (_length != 0) {
             uint8 j;
@@ -108,15 +126,26 @@ abstract contract TasksUtils is TasksEnsure {
                 }
             }
         }
+    }
 
+    // In addition to _ensureRewardBellowBudget also sets the storage (and works with calldata arrays)
+    function _setRewardBellowBudget(
+        Task storage task,
+        Application storage application,
+        NativeReward[] calldata _nativeReward,
+        Reward[] calldata _reward
+    ) internal {
         // Gas optimzation
-        if (_nativeLength != 0) {
+        if (_nativeReward.length != 0) {
+            application.nativeRewardCount = _toUint8(_nativeReward.length);
+
             uint256 needed;
-            for (uint8 i; i < _nativeLength;) {
+            for (uint8 i; i < uint8(_nativeReward.length);) {
                 unchecked {
                     needed += _nativeReward[i].amount;
                 }
 
+                application.nativeReward[i] = _nativeReward[i];
                 unchecked {
                     ++i;
                 }
@@ -126,15 +155,7 @@ abstract contract TasksUtils is TasksEnsure {
                 revert RewardAboveBudget();
             }
         }
-    }
 
-    // In addition to _ensureRewardBellowBudget also sets the storage (and works with calldata arrays)
-    function _setRewardBellowBudget(
-        Task storage task,
-        Application storage application,
-        Reward[] calldata _reward,
-        NativeReward[] calldata _nativeReward
-    ) internal {
         // Gas optimzation
         if (_reward.length != 0) {
             application.rewardCount = _toUint8(_reward.length);
@@ -165,26 +186,17 @@ abstract contract TasksUtils is TasksEnsure {
                 }
             }
         }
+    }
 
+    function _increaseNativeBudget(Task storage task) internal {
         // Gas optimzation
-        if (_nativeReward.length != 0) {
-            application.nativeRewardCount = _toUint8(_nativeReward.length);
-
-            uint256 needed;
-            for (uint8 i; i < uint8(_nativeReward.length);) {
-                unchecked {
-                    needed += _nativeReward[i].amount;
-                }
-
-                application.nativeReward[i] = _nativeReward[i];
-                unchecked {
-                    ++i;
-                }
+        if (msg.value != 0) {
+            (bool success,) = address(task.escrow).call{value: msg.value}("");
+            if (!success) {
+                revert NativeTransferFailed();
             }
 
-            if (needed > task.nativeBudget) {
-                revert RewardAboveBudget();
-            }
+            task.nativeBudget = _toUint96(task.nativeBudget + msg.value);
         }
     }
 
@@ -205,22 +217,33 @@ abstract contract TasksUtils is TasksEnsure {
         }
     }
 
-    function _increaseNativeBudget(Task storage task) internal {
-        // Gas optimzation
-        if (msg.value != 0) {
-            (bool success,) = address(task.escrow).call{value: msg.value}("");
-            if (!success) {
-                revert NativeTransferFailed();
-            }
-
-            task.nativeBudget = _toUint96(task.nativeBudget + msg.value);
-        }
-    }
-
     function _payoutTask(Task storage task) internal {
         Application storage executor = task.applications[task.executorApplication];
         address creator = task.creator;
         Escrow escrow = task.escrow;
+
+        // Gas optimzation
+        uint8 nativeRewardCount = executor.nativeRewardCount;
+        if (nativeRewardCount != 0) {
+            uint96 paidOut;
+            for (uint8 i; i < nativeRewardCount;) {
+                escrow.transferNative(payable(executor.nativeReward[i].to), executor.nativeReward[i].amount);
+                unchecked {
+                    paidOut += executor.nativeReward[i].amount;
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
+
+            // Gas optimzation
+            if (paidOut < task.nativeBudget) {
+                unchecked {
+                    escrow.transferNative(payable(task.creator), task.nativeBudget - paidOut);
+                }
+            }
+        }
 
         // Gas optimzation
         uint8 rewardCount = executor.rewardCount;
@@ -254,29 +277,6 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
-        uint8 nativeRewardCount = executor.nativeRewardCount;
-        if (nativeRewardCount != 0) {
-            uint96 paidOut;
-            for (uint8 i; i < nativeRewardCount;) {
-                escrow.transferNative(payable(executor.nativeReward[i].to), executor.nativeReward[i].amount);
-                unchecked {
-                    paidOut += executor.nativeReward[i].amount;
-                }
-
-                unchecked {
-                    ++i;
-                }
-            }
-
-            // Gas optimzation
-            if (paidOut < task.nativeBudget) {
-                unchecked {
-                    escrow.transferNative(payable(task.creator), task.nativeBudget - paidOut);
-                }
-            }
-        }
-
         task.state = TaskState.Closed;
     }
 
@@ -284,6 +284,12 @@ abstract contract TasksUtils is TasksEnsure {
         Escrow escrow = task.escrow;
         address creator = task.creator;
 
+        // Gas optimzation
+        if (task.nativeBudget != 0) {
+            escrow.transferNative(payable(creator), task.nativeBudget);
+        }
+
+        // Gas optimzation
         uint8 budgetCount = task.budgetCount;
         if (budgetCount != 0) {
             for (uint8 i; i < budgetCount;) {
@@ -296,21 +302,37 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
-        if (task.nativeBudget != 0) {
-            escrow.transferNative(payable(creator), task.nativeBudget);
-        }
-
         task.state = TaskState.Closed;
     }
 
     function _payoutTaskPartially(
         Task storage task,
-        uint88[] calldata _partialReward,
-        uint96[] calldata _partialNativeReward
+        uint96[] calldata _partialNativeReward,
+        uint88[] calldata _partialReward
     ) internal {
         Application storage executor = task.applications[task.executorApplication];
         Escrow escrow = task.escrow;
+
+        // Gas optimzation
+        uint8 nativeRewardCount = executor.nativeRewardCount;
+        if (nativeRewardCount != 0) {
+            for (uint8 i; i < nativeRewardCount;) {
+                if (_partialNativeReward[i] > executor.nativeReward[i].amount) {
+                    revert PartialRewardAboveFullReward();
+                }
+
+                escrow.transferNative(payable(executor.nativeReward[i].to), _partialNativeReward[i]);
+
+                unchecked {
+                    executor.nativeReward[i].amount -= _partialNativeReward[i];
+                    ++i;
+                }
+            }
+
+            unchecked {
+                task.nativeBudget = _toUint96(address(escrow).balance);
+            }
+        }
 
         // Gas optimzation
         uint8 rewardCount = executor.rewardCount;
@@ -342,27 +364,6 @@ abstract contract TasksUtils is TasksEnsure {
                 unchecked {
                     ++i;
                 }
-            }
-        }
-
-        // Gas optimzation
-        uint8 nativeRewardCount = executor.nativeRewardCount;
-        if (nativeRewardCount != 0) {
-            for (uint8 i; i < nativeRewardCount;) {
-                if (_partialNativeReward[i] > executor.nativeReward[i].amount) {
-                    revert PartialRewardAboveFullReward();
-                }
-
-                escrow.transferNative(payable(executor.nativeReward[i].to), _partialNativeReward[i]);
-
-                unchecked {
-                    executor.nativeReward[i].amount -= _partialNativeReward[i];
-                    ++i;
-                }
-            }
-
-            unchecked {
-                task.nativeBudget = _toUint96(address(escrow).balance);
             }
         }
     }

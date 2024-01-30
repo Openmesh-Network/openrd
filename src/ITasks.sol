@@ -40,18 +40,18 @@ interface ITasks {
         uint256 indexed taskId,
         string metadata,
         uint64 deadline,
-        ERC20Transfer[] budget,
-        uint96 nativeBudget,
-        address creator,
         address manager,
-        address disputeManager
+        address disputeManager,
+        address creator,
+        uint96 nativeBudget,
+        ERC20Transfer[] budget
     );
     event ApplicationCreated(
         uint256 indexed taskId,
         uint32 indexed applicationId,
         string metadata,
-        Reward[] reward,
-        NativeReward[] nativeReward
+        NativeReward[] nativeReward,
+        Reward[] reward
     );
     event ApplicationAccepted(uint256 indexed taskId, uint32 indexed applicationId);
     event TaskTaken(uint256 indexed taskId, uint32 indexed applicationId);
@@ -69,7 +69,7 @@ interface ITasks {
     event DeadlineChanged(uint256 indexed taskId, uint64 newDeadline);
     event BudgetChanged(uint256 indexed taskId); // Quite expensive to transfer budget into a datastructure to emit
     event MetadataChanged(uint256 indexed taskId, string newMetadata);
-    event PartialPayment(uint256 indexed taskId, uint88[] partialReward, uint96[] partialNativeReward);
+    event PartialPayment(uint256 indexed taskId, uint96[] partialNativeReward, uint88[] partialReward);
     event NewManager(uint256 indexed taskId, address manager);
 
     /// @notice A container for ERC20 transfer information.
@@ -104,33 +104,33 @@ interface ITasks {
     /// @param metadata Metadata of the application. (IPFS hash)
     /// @param applicant Who has submitted this application.
     /// @param accepted If the application has been accepted by the manager.
-    /// @param reward How much rewards the applicant wants for completion.
     /// @param nativeReward How much native currency the applicant wants for completion.
+    /// @param reward How much rewards the applicant wants for completion.
     struct Application {
         string metadata;
         // Storage block seperator
         address applicant;
         bool accepted;
-        uint8 rewardCount;
         uint8 nativeRewardCount;
+        uint8 rewardCount;
         // Storage block seperator
-        mapping(uint8 => Reward) reward;
         mapping(uint8 => NativeReward) nativeReward;
+        mapping(uint8 => Reward) reward;
     }
 
     struct OffChainApplication {
         string metadata;
         address applicant;
         bool accepted;
-        Reward[] reward;
         NativeReward[] nativeReward;
+        Reward[] reward;
     }
 
     /// @notice For approving people on task creation (they are not required to make an application).
     struct PreapprovedApplication {
         address applicant;
-        Reward[] reward;
         NativeReward[] nativeReward;
+        Reward[] reward;
     }
 
     enum SubmissionJudgement {
@@ -216,9 +216,9 @@ interface ITasks {
         string metadata;
         uint64 deadline;
         uint32 executorApplication;
-        address creator;
         address manager;
         address disputeManager;
+        address creator;
         TaskState state;
         Escrow escrow;
         uint96 nativeBudget;
@@ -264,14 +264,14 @@ interface ITasks {
     /// @notice Apply to take the task.
     /// @param _taskId Id of the task.
     /// @param _metadata Metadata of your application.
-    /// @param _reward Wanted rewards for completing the task.
     /// @param _nativeReward Wanted native currency for completing the task.
+    /// @param _reward Wanted rewards for completing the task.
     /// @return applicationId Id of the newly created application.
     function applyForTask(
         uint256 _taskId,
         string calldata _metadata,
-        Reward[] calldata _reward,
-        NativeReward[] calldata _nativeReward
+        NativeReward[] calldata _nativeReward,
+        Reward[] calldata _reward
     ) external returns (uint32 applicationId);
 
     /// @notice Accept application to allow them to take the task.
@@ -341,20 +341,20 @@ interface ITasks {
 
     /// @notice Completes the task through dispute resolution.
     /// @param _taskId Id of the task.
-    /// @param _partialReward How much of each ERC20 reward should be paid out.
     /// @param _partialNativeReward How much of each native reward should be paid out.
+    /// @param _partialReward How much of each ERC20 reward should be paid out.
     function completeByDispute(
         uint256 _taskId,
-        uint88[] calldata _partialReward,
-        uint96[] calldata _partialNativeReward
+        uint96[] calldata _partialNativeReward,
+        uint88[] calldata _partialReward
     ) external;
 
     /// @notice Releases a part of the reward to the executor without marking the task as complete.
     /// @param _taskId Id of the task.
-    /// @param _partialReward How much of each ERC20 reward should be paid out.
     /// @param _partialNativeReward How much of each native reward should be paid out.
+    /// @param _partialReward How much of each ERC20 reward should be paid out.
     /// @dev Will fetch balanceOf to set the budget afterwards, can be used in case funds where sent manually to the escrow to sync the budget.
-    function partialPayment(uint256 _taskId, uint88[] calldata _partialReward, uint96[] calldata _partialNativeReward)
+    function partialPayment(uint256 _taskId, uint96[] calldata _partialNativeReward, uint88[] calldata _partialReward)
         external;
 
     /// @notice Transfers the manager role to a different address.
