@@ -4,3 +4,6 @@
 [submodule "web3webdeploy"]
 	path = web3webdeploy
 	url = https://github.com/Plopmenz/web3webdeploy
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
