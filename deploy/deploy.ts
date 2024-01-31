@@ -1,31 +1,21 @@
 import { Address, Deployer } from "../web3webdeploy/types";
-import { deployCounter } from "./counters/Counter";
-import { deployProxyCounter } from "./counters/ProxyCounter";
 
-export interface DeploymentSettings {
-  startingNumber: bigint;
-}
+export interface TasksDeploymentSettings {}
 
-export interface Deployment {
-  counter: Address;
-  proxyCounter: Address;
+export interface TasksDeployment {
+  tasks: Address;
 }
 
 export async function deploy(
   deployer: Deployer,
-  settings?: DeploymentSettings
-): Promise<Deployment> {
-  const counter = await deployCounter(deployer);
-  const proxyCounter = await deployProxyCounter(deployer, counter);
-  await deployer.execute({
-    id: "InitialCounterNumber",
-    abi: "Counter",
-    to: counter,
-    function: "setNumber",
-    args: [settings?.startingNumber ?? BigInt(3)],
+  settings?: TasksDeploymentSettings
+): Promise<TasksDeployment> {
+  const tasks = await deployer.deploy({
+    id: "Tasks",
+    contract: "Tasks",
+    args: ["0x2309762aAcA0a8F689463a42c0A6A84BE3A7ea51"],
   });
   return {
-    counter: counter,
-    proxyCounter: proxyCounter,
+    tasks: tasks,
   };
 }
