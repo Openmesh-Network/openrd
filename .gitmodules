@@ -10,3 +10,6 @@
 [submodule "lib/openmesh-admin"]
 	path = lib/openmesh-admin
 	url = https://github.com/plopmenz/openmesh-admin
+[submodule "lib/ens-reverse-registrar"]
+	path = lib/ens-reverse-registrar
+	url = https://github.com/plopmenz/ens-reverse-registrar
