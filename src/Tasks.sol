@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ClaimReverseENS} from "../lib/ens-reverse-registrar/src/ClaimReverseENS.sol";
+
 import {ITasks, IERC20, Escrow} from "./ITasks.sol";
 import {TasksUtils, SafeERC20} from "./TasksUtils.sol";
 
-contract Tasks is TasksUtils {
+contract Tasks is TasksUtils, ClaimReverseENS {
     using SafeERC20 for IERC20;
 
     /// @notice The incremental ID for tasks.
     uint256 private taskCounter;
 
     /// @notice A mapping between task IDs and task information.
-    mapping(uint256 => Task) internal tasks;
+    mapping(uint256 => Task) private tasks;
 
     /// @notice The base escrow contract that will be cloned for every task.
-    address public immutable escrowImplementation;
+    address private immutable escrowImplementation;
 
     /// @notice This address has the power to disable the contract, in case an exploit is discovered.
     address private disabler;
@@ -23,9 +25,9 @@ contract Tasks is TasksUtils {
     error NotDisabled();
     error NotDisabler();
 
-    constructor(address _disabler) {
+    constructor(address _admin, address _reverseRegistrar) ClaimReverseENS(_reverseRegistrar, _admin) {
         escrowImplementation = address(new Escrow());
-        disabler = _disabler;
+        disabler = _admin;
     }
 
     /// @inheritdoc ITasks
