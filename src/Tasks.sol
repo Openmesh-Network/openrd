@@ -10,13 +10,13 @@ contract Tasks is TasksUtils, ClaimReverseENS {
     using SafeERC20 for IERC20;
 
     /// @notice The incremental ID for tasks.
-    uint256 private taskCounter;
+    uint256 internal taskCounter;
 
     /// @notice A mapping between task IDs and task information.
     mapping(uint256 => Task) private tasks;
 
     /// @notice The base escrow contract that will be cloned for every task.
-    address private immutable escrowImplementation;
+    address internal immutable escrowImplementation;
 
     /// @notice This address has the power to disable the contract, in case an exploit is discovered.
     address private disabler;

@@ -10,7 +10,7 @@ contract Escrow {
     error AlreadyInitialized();
     error NotOwner();
 
-    address private owner;
+    address internal owner;
 
     receive() external payable {}
 
