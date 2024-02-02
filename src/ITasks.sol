@@ -44,7 +44,8 @@ interface ITasks {
         address disputeManager,
         address creator,
         uint96 nativeBudget,
-        ERC20Transfer[] budget
+        ERC20Transfer[] budget,
+        Escrow escrow
     );
     event ApplicationCreated(
         uint256 indexed taskId,
@@ -59,10 +60,10 @@ interface ITasks {
     event SubmissionReviewed(
         uint256 indexed taskId, uint8 indexed submissionId, SubmissionJudgement judgement, string feedback
     );
-    event TaskCompleted(uint256 indexed taskId, TaskCompletion source);
+    event TaskCompleted(uint256 indexed taskId, TaskCompletionSource source);
 
-    event CancelTaskRequested(uint256 indexed taskId, uint8 indexed requestId, string explanation);
-    event TaskCancelled(uint256 indexed taskId);
+    event CancelTaskRequested(uint256 indexed taskId, uint8 indexed requestId, string metadata);
+    event TaskCancelled(uint256 indexed taskId, string metadata);
     event RequestAccepted(uint256 indexed taskId, RequestType indexed requestType, uint8 indexed requestId);
     event RequestExecuted(uint256 indexed taskId, RequestType indexed requestType, uint8 indexed requestId, address by);
 
@@ -70,13 +71,21 @@ interface ITasks {
     event BudgetChanged(uint256 indexed taskId); // Quite expensive to transfer budget into a datastructure to emit
     event MetadataChanged(uint256 indexed taskId, string newMetadata);
     event PartialPayment(uint256 indexed taskId, uint96[] partialNativeReward, uint88[] partialReward);
-    event NewManager(uint256 indexed taskId, address manager);
+    event NewManager(uint256 indexed taskId, address newManager);
 
     /// @notice A container for ERC20 transfer information.
     /// @param tokenContract ERC20 token to transfer.
     /// @param amount How much of this token should be transfered. uint96 to keep struct packed into a single uint256.
     struct ERC20Transfer {
         IERC20 tokenContract;
+        uint96 amount;
+    }
+
+    /// @notice A container for a native reward payout.
+    /// @param to Whom the native reward should be transfered to.
+    /// @param amount How much native reward should be transfered. uint96 to keep struct packed into a single uint256.
+    struct NativeReward {
+        address to;
         uint96 amount;
     }
 
@@ -90,14 +99,6 @@ interface ITasks {
         bool nextToken;
         address to;
         uint88 amount;
-    }
-
-    /// @notice A container for a native reward payout.
-    /// @param to Whom the native reward should be transfered to.
-    /// @param amount How much native reward should be transfered. uint96 to keep struct packed into a single uint256.
-    struct NativeReward {
-        address to;
-        uint96 amount;
     }
 
     /// @notice A container for a task application.
@@ -162,10 +163,10 @@ interface ITasks {
 
     /// @notice A container for a request to cancel the task.
     /// @param request Request information.
-    /// @param explanation Why the task should be cancelled.
+    /// @param metadata Metadata of the request. (IPFS hash, Why the task should be cancelled)
     struct CancelTaskRequest {
         Request request;
-        string explanation;
+        string metadata;
     }
 
     enum TaskState {
@@ -228,7 +229,7 @@ interface ITasks {
         CancelTaskRequest[] cancelTaskRequests;
     }
 
-    enum TaskCompletion {
+    enum TaskCompletionSource {
         SubmissionAccepted,
         Dispute
     }
@@ -305,9 +306,9 @@ interface ITasks {
 
     /// @notice Cancels a task. This can be used to close a task and receive back the budget.
     /// @param _taskId Id of the task.
-    /// @param _explanation Why the task was cancelled. (IPFS hash)
+    /// @param _metadata Why the task was cancelled. (IPFS hash)
     /// @return cancelTaskRequestId Id of the newly created request for task cancellation.
-    function cancelTask(uint256 _taskId, string calldata _explanation) external returns (uint8 cancelTaskRequestId);
+    function cancelTask(uint256 _taskId, string calldata _metadata) external returns (uint8 cancelTaskRequestId);
 
     /// @notice Accepts a request, executing the proposed action.
     /// @param _taskId Id of the task.

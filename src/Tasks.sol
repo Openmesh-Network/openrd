@@ -69,31 +69,29 @@ contract Tasks is TasksUtils, ClaimReverseENS {
         Task storage task = tasks[taskId];
         task.metadata = _metadata;
         task.deadline = _deadline;
-        {
-            Escrow escrow = Escrow(payable(clone(escrowImplementation)));
-            escrow.__Escrow_init{value: msg.value}();
-            task.escrow = escrow;
+        Escrow escrow = Escrow(payable(clone(escrowImplementation)));
+        escrow.__Escrow_init{value: msg.value}();
+        task.escrow = escrow;
 
-            // Gas optimization
-            if (msg.value != 0) {
-                task.nativeBudget = _toUint96(msg.value);
-            }
+        // Gas optimization
+        if (msg.value != 0) {
+            task.nativeBudget = _toUint96(msg.value);
+        }
 
-            // Gas optimization
-            if (_budget.length != 0) {
-                task.budgetCount = _toUint8(_budget.length);
-                for (uint8 i; i < uint8(_budget.length);) {
-                    // Please mind that this external user specified "token contract" could be used for reentrancies. As all funds are held in seperate escrows (this contract has none), this should not be an issue.
-                    // Possible "attack": create an application, accept it and take the task inside the safeTransferFrom call, the preapproved application can be used to overwrite the reward (although limited by the budget).
-                    // This all happens in a single transaction, which means realistically the proposer could achieve the same result anyhow.
-                    _budget[i].tokenContract.safeTransferFrom(msg.sender, address(escrow), _budget[i].amount);
-                    // use balanceOf in case there is a fee assosiated with the transfer
-                    task.budget[i] = ERC20Transfer(
-                        _budget[i].tokenContract, _toUint96(_budget[i].tokenContract.balanceOf(address(escrow)))
-                    );
-                    unchecked {
-                        ++i;
-                    }
+        // Gas optimization
+        if (_budget.length != 0) {
+            task.budgetCount = _toUint8(_budget.length);
+            for (uint8 i; i < uint8(_budget.length);) {
+                // Please mind that this external user specified "token contract" could be used for reentrancies. As all funds are held in seperate escrows (this contract has none), this should not be an issue.
+                // Possible "attack": create an application, accept it and take the task inside the safeTransferFrom call, the preapproved application can be used to overwrite the reward (although limited by the budget).
+                // This all happens in a single transaction, which means realistically the proposer could achieve the same result anyhow.
+                _budget[i].tokenContract.safeTransferFrom(msg.sender, address(escrow), _budget[i].amount);
+                // use balanceOf in case there is a fee assosiated with the transfer
+                task.budget[i] = ERC20Transfer(
+                    _budget[i].tokenContract, _toUint96(_budget[i].tokenContract.balanceOf(address(escrow)))
+                );
+                unchecked {
+                    ++i;
                 }
             }
         }
@@ -108,7 +106,7 @@ contract Tasks is TasksUtils, ClaimReverseENS {
         // task.state = TaskState.Open;
 
         emit TaskCreated(
-            taskId, _metadata, _deadline, _manager, _disputeManager, msg.sender, _toUint96(msg.value), _budget
+            taskId, _metadata, _deadline, _manager, _disputeManager, msg.sender, _toUint96(msg.value), _budget, escrow
         );
 
         // Gas optimization
@@ -253,14 +251,14 @@ contract Tasks is TasksUtils, ClaimReverseENS {
 
         if (_judgement == SubmissionJudgement.Accepted) {
             _payoutTask(task);
-            emit TaskCompleted(_taskId, TaskCompletion.SubmissionAccepted);
+            emit TaskCompleted(_taskId, TaskCompletionSource.SubmissionAccepted);
         }
 
         emit SubmissionReviewed(_taskId, _submissionId, _judgement, _feedback);
     }
 
     /// @inheritdoc ITasks
-    function cancelTask(uint256 _taskId, string calldata _explanation) external returns (uint8 cancelTaskRequestId) {
+    function cancelTask(uint256 _taskId, string calldata _metadata) external returns (uint8 cancelTaskRequestId) {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureSenderIsManager(task);
@@ -271,7 +269,7 @@ contract Tasks is TasksUtils, ClaimReverseENS {
             // Task is open or deadline past
             _refundCreator(task);
 
-            emit TaskCancelled(_taskId);
+            emit TaskCancelled(_taskId, _metadata);
 
             // Max means no request
             cancelTaskRequestId = type(uint8).max;
@@ -279,9 +277,9 @@ contract Tasks is TasksUtils, ClaimReverseENS {
             // Task is taken and deadline has not past
             cancelTaskRequestId = task.cancelTaskRequestCount++; // Will overflow if it would be max (guarantees max means no request)
             CancelTaskRequest storage request = task.cancelTaskRequests[cancelTaskRequestId];
-            request.explanation = _explanation;
+            request.metadata = _metadata;
 
-            emit CancelTaskRequested(_taskId, cancelTaskRequestId, _explanation);
+            emit CancelTaskRequested(_taskId, cancelTaskRequestId, _metadata);
         }
     }
 
@@ -304,7 +302,7 @@ contract Tasks is TasksUtils, ClaimReverseENS {
                 // use executeRequest in the body instead? (more gas due to all the checks, but less code duplication)
                 _refundCreator(task);
 
-                emit TaskCancelled(_taskId);
+                emit TaskCancelled(_taskId, cancelTaskRequest.metadata);
                 cancelTaskRequest.request.executed = true;
 
                 emit RequestExecuted(_taskId, _requestType, _requestId, msg.sender);
@@ -330,7 +328,7 @@ contract Tasks is TasksUtils, ClaimReverseENS {
 
             _refundCreator(task);
 
-            emit TaskCancelled(_taskId);
+            emit TaskCancelled(_taskId, cancelTaskRequest.metadata);
             cancelTaskRequest.request.executed = true;
         }
 
@@ -393,7 +391,7 @@ contract Tasks is TasksUtils, ClaimReverseENS {
         _refundCreator(task);
 
         emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
-        emit TaskCompleted(_taskId, TaskCompletion.Dispute);
+        emit TaskCompleted(_taskId, TaskCompletionSource.Dispute);
     }
 
     /// @inheritdoc ITasks
