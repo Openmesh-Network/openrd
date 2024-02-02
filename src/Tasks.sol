@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ClaimReverseENS} from "../lib/ens-reverse-registrar/src/ClaimReverseENS.sol";
+import {OpenmeshENSReverseClaimable} from "../lib/openmesh-admin/src/OpenmeshENSReverseClaimable.sol";
 
 import {ITasks, IERC20, Escrow} from "./ITasks.sol";
 import {TasksUtils, SafeERC20} from "./TasksUtils.sol";
 
-contract Tasks is TasksUtils, ClaimReverseENS {
+contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     using SafeERC20 for IERC20;
 
     /// @notice The incremental ID for tasks.
@@ -25,9 +25,9 @@ contract Tasks is TasksUtils, ClaimReverseENS {
     error NotDisabled();
     error NotDisabler();
 
-    constructor(address _admin, address _reverseRegistrar) ClaimReverseENS(_reverseRegistrar, _admin) {
+    constructor() OpenmeshENSReverseClaimable() {
         escrowImplementation = address(new Escrow());
-        disabler = _admin;
+        disabler = OPENMESH_ADMIN;
     }
 
     /// @inheritdoc ITasks
