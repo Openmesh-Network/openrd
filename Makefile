@@ -1,5 +1,8 @@
-include .env
-export
+# Import .env variables if the file exists
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
 
 deploy:
 	${MAKE} --directory=./web3webdeploy deploy
@@ -47,9 +50,12 @@ template-update-fromstart:
 empty:
 	rm -rf deploy/counters/Counter.ts
 	rm -rf deploy/counters/ProxyCounter.ts
+	rm -rf deploy/counters/SetInitialCounterValue.ts
 	rmdir deploy/counters || true
+
 	rm -rf src/Counter.sol
 	rm -rf src/ProxyCounter.sol
+
 	rm -rf test/Counter.t.sol
 	rm -rf test/ProxyCounter.t.sol
 .PHONY: empty
@@ -58,6 +64,7 @@ empty:
 # Ideally these also take the configuration in consideration
 clean:
 	rm -rf ./web3webdeploy/.next 
+	rm -rf ./web3webdeploy/node_modules
 	rm -rf cache
 	rm -rf out
 .PHONY: clean

@@ -16,6 +16,7 @@ export async function deploy(
     contract: "Tasks",
     ...settings,
   });
+
   return {
     tasks: tasks,
   };
