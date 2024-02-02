@@ -18,7 +18,7 @@ contract Escrow {
 
     /// @notice Initializes the Escrow with the sender of the transaction as owner.
     /// @dev This should be called in the same transaction as deploying the escrow, to prevent front running.
-    function __Escrow_init() external payable {
+    function __Escrow_init() public payable {
         if (owner != address(0)) {
             revert AlreadyInitialized();
         }
