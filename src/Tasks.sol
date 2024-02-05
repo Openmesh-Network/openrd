@@ -119,7 +119,9 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
                 _ensureRewardEndsWithNextToken(_preapprove[i].reward);
                 _setRewardBellowBudget(task, application, _preapprove[i].nativeReward, _preapprove[i].reward);
 
-                emit ApplicationCreated(taskId, i, "", _preapprove[i].nativeReward, _preapprove[i].reward);
+                emit ApplicationCreated(
+                    taskId, i, "", _preapprove[i].applicant, _preapprove[i].nativeReward, _preapprove[i].reward
+                );
                 emit ApplicationAccepted(taskId, i);
 
                 unchecked {
@@ -168,7 +170,7 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
             }
         }
 
-        emit ApplicationCreated(_taskId, applicationId, _metadata, _nativeReward, _reward);
+        emit ApplicationCreated(_taskId, applicationId, _metadata, msg.sender, _nativeReward, _reward);
     }
 
     /// @inheritdoc ITasks
@@ -376,6 +378,19 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     }
 
     /// @inheritdoc ITasks
+    function transferManagement(uint256 _taskId, address _newManager) external {
+        _ensureNotDisabled();
+        Task storage task = _getTask(_taskId);
+        _ensureSenderIsManager(task);
+
+        _ensureTaskNotClosed(task);
+
+        task.manager = _newManager;
+
+        emit ManagerChanged(_taskId, _newManager);
+    }
+
+    /// @inheritdoc ITasks
     function completeByDispute(
         uint256 _taskId,
         uint96[] calldata _partialNativeReward,
@@ -408,19 +423,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
         emit BudgetChanged(_taskId);
         emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
-    }
-
-    /// @inheritdoc ITasks
-    function transferManagement(uint256 _taskId, address _newManager) external {
-        _ensureNotDisabled();
-        Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
-        _ensureTaskNotClosed(task);
-
-        task.manager = _newManager;
-
-        emit NewManager(_taskId, _newManager);
     }
 
     function disable() external {

@@ -51,6 +51,7 @@ interface ITasks {
         uint256 indexed taskId,
         uint32 indexed applicationId,
         string metadata,
+        address applicant,
         NativeReward[] nativeReward,
         Reward[] reward
     );
@@ -70,8 +71,8 @@ interface ITasks {
     event DeadlineChanged(uint256 indexed taskId, uint64 newDeadline);
     event BudgetChanged(uint256 indexed taskId); // Quite expensive to transfer budget into a datastructure to emit
     event MetadataChanged(uint256 indexed taskId, string newMetadata);
+    event ManagerChanged(uint256 indexed taskId, address newManager);
     event PartialPayment(uint256 indexed taskId, uint96[] partialNativeReward, uint88[] partialReward);
-    event NewManager(uint256 indexed taskId, address newManager);
 
     /// @notice A container for ERC20 transfer information.
     /// @param tokenContract ERC20 token to transfer.
@@ -340,6 +341,11 @@ interface ITasks {
     /// @dev This metadata update might change the task completely. Show a warning to people who applied before the change.
     function editMetadata(uint256 _taskId, string calldata _newMetadata) external;
 
+    /// @notice Transfers the manager role to a different address.
+    /// @param _taskId Id of the task.
+    /// @param _newManager What address should become the manager.
+    function transferManagement(uint256 _taskId, address _newManager) external;
+
     /// @notice Completes the task through dispute resolution.
     /// @param _taskId Id of the task.
     /// @param _partialNativeReward How much of each native reward should be paid out.
@@ -357,9 +363,4 @@ interface ITasks {
     /// @dev Will fetch balanceOf to set the budget afterwards, can be used in case funds where sent manually to the escrow to sync the budget.
     function partialPayment(uint256 _taskId, uint96[] calldata _partialNativeReward, uint88[] calldata _partialReward)
         external;
-
-    /// @notice Transfers the manager role to a different address.
-    /// @param _taskId Id of the task.
-    /// @param _newManager What address should become the manager.
-    function transferManagement(uint256 _taskId, address _newManager) external;
 }
