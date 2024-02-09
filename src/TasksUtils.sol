@@ -223,33 +223,39 @@ abstract contract TasksUtils is TasksEnsure {
         Escrow escrow = task.escrow;
 
         // Gas optimzation
-        uint8 nativeRewardCount = executor.nativeRewardCount;
-        if (nativeRewardCount != 0) {
+        uint256 nativeBudget = task.nativeBudget;
+        if (nativeBudget != 0) {
             uint96 paidOut;
-            for (uint8 i; i < nativeRewardCount;) {
-                escrow.transferNative(payable(executor.nativeReward[i].to), executor.nativeReward[i].amount);
-                unchecked {
-                    paidOut += executor.nativeReward[i].amount;
-                }
 
-                unchecked {
-                    ++i;
+            // Gas optimzation
+            uint8 nativeRewardCount = executor.nativeRewardCount;
+            if (nativeRewardCount != 0) {
+                for (uint8 i; i < nativeRewardCount;) {
+                    escrow.transferNative(payable(executor.nativeReward[i].to), executor.nativeReward[i].amount);
+                    unchecked {
+                        paidOut += executor.nativeReward[i].amount;
+                    }
+
+                    unchecked {
+                        ++i;
+                    }
                 }
             }
 
             // Gas optimzation
-            if (paidOut < task.nativeBudget) {
+            if (paidOut < nativeBudget) {
                 unchecked {
-                    escrow.transferNative(payable(task.creator), task.nativeBudget - paidOut);
+                    escrow.transferNative(payable(creator), nativeBudget - paidOut);
                 }
             }
         }
 
         // Gas optimzation
-        uint8 rewardCount = executor.rewardCount;
-        if (rewardCount != 0) {
+        uint8 budgetCount = task.budgetCount;
+        if (budgetCount != 0) {
+            // Gas optimzation
+            uint8 rewardCount = executor.rewardCount;
             uint8 j;
-            uint8 budgetCount = task.budgetCount;
             for (uint8 i; i < budgetCount;) {
                 ERC20Transfer memory erc20Transfer = task.budget[i];
                 while (j < rewardCount) {
