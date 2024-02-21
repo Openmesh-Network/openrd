@@ -19,6 +19,12 @@ abstract contract TasksEnsure is ITasks {
         }
     }
 
+    function _ensureTaskClosed(Task storage task) internal view {
+        if (task.state != TaskState.Closed) {
+            revert TaskNotClosed();
+        }
+    }
+
     function _ensureTaskNotClosed(Task storage task) internal view {
         if (task.state == TaskState.Closed) {
             revert TaskClosed();

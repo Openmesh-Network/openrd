@@ -70,6 +70,9 @@ interface ITasks {
 
     event DeadlineChanged(uint256 indexed taskId, uint64 newDeadline);
     event BudgetChanged(uint256 indexed taskId); // Quite expensive to transfer budget into a datastructure to emit
+    event RewardIncreased(
+        uint256 indexed taskId, uint32 indexed applicationId, uint96[] nativeIncrease, uint88[] increase
+    );
     event MetadataChanged(uint256 indexed taskId, string newMetadata);
     event ManagerChanged(uint256 indexed taskId, address newManager);
     event PartialPayment(uint256 indexed taskId, uint96[] partialNativeReward, uint88[] partialReward);
@@ -334,6 +337,18 @@ interface ITasks {
     /// @param _increase How much to increase each tokens amount by.
     /// @dev Any attached native reward will also be used to increase the budget.
     function increaseBudget(uint256 _taskId, uint96[] calldata _increase) external payable;
+
+    /// @notice Increase the reward of an application of the task.
+    /// @param _taskId Id of the task.
+    /// @param _applicationId Id of the application.
+    /// @param _nativeIncrease How much to increase each native amount by.
+    /// @param _increase How much to increase each tokens amount by.
+    function increaseReward(
+        uint256 _taskId,
+        uint32 _applicationId,
+        uint96[] calldata _nativeIncrease,
+        uint88[] calldata _increase
+    ) external;
 
     /// @notice Edit the metadata of a task.
     /// @param _taskId Id of the task.

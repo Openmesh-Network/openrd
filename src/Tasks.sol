@@ -263,9 +263,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     function cancelTask(uint256 _taskId, string calldata _metadata) external returns (uint8 cancelTaskRequestId) {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
         _ensureTaskNotClosed(task);
+        _ensureSenderIsManager(task);
 
         if (task.state == TaskState.Open || task.deadline <= uint64(block.timestamp)) {
             // Task is open or deadline past
@@ -341,9 +340,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     function extendDeadline(uint256 _taskId, uint64 _extension) external {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
         _ensureTaskNotClosed(task);
+        _ensureSenderIsManager(task);
 
         task.deadline += _extension;
 
@@ -354,9 +352,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     function increaseBudget(uint256 _taskId, uint96[] calldata _increase) external payable {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
+        _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
-
-        _ensureTaskIsOpen(task);
 
         _increaseNativeBudget(task);
         _increaseBudget(task, _increase);
@@ -365,12 +362,44 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     }
 
     /// @inheritdoc ITasks
+    function increaseReward(
+        uint256 _taskId,
+        uint32 _applicationId,
+        uint96[] calldata _nativeIncrease,
+        uint88[] calldata _increase
+    ) external {
+        _ensureNotDisabled();
+        Task storage task = _getTask(_taskId);
+        _ensureTaskNotClosed(task);
+        _ensureSenderIsManager(task);
+
+        _ensureApplicationExists(task, _applicationId);
+        Application storage application = task.applications[_applicationId];
+        uint8 nativeRewardCount = application.nativeRewardCount;
+        for (uint8 i; i < nativeRewardCount;) {
+            application.nativeReward[i].amount += _nativeIncrease[i];
+            unchecked {
+                ++i;
+            }
+        }
+        uint8 rewardCount = application.rewardCount;
+        for (uint8 i; i < rewardCount;) {
+            application.reward[i].amount += _increase[i];
+            unchecked {
+                ++i;
+            }
+        }
+        _ensureRewardBellowBudget(task, nativeRewardCount, rewardCount, application.nativeReward, application.reward);
+
+        emit RewardIncreased(_taskId, _applicationId, _nativeIncrease, _increase);
+    }
+
+    /// @inheritdoc ITasks
     function editMetadata(uint256 _taskId, string calldata _newMetadata) external {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
         _ensureTaskIsOpen(task);
+        _ensureSenderIsManager(task);
 
         task.metadata = _newMetadata;
 
@@ -381,9 +410,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     function transferManagement(uint256 _taskId, address _newManager) external {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
         _ensureTaskNotClosed(task);
+        _ensureSenderIsManager(task);
 
         task.manager = _newManager;
 
@@ -398,9 +426,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     ) external {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsDisputeManager(task);
-
         _ensureTaskIsTaken(task);
+        _ensureSenderIsDisputeManager(task);
 
         _payoutTaskPartially(task, _partialNativeReward, _partialReward);
         _refundCreator(task);
@@ -415,14 +442,31 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     {
         _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
-        _ensureSenderIsManager(task);
-
         _ensureTaskIsTaken(task);
+        _ensureSenderIsManager(task);
 
         _payoutTaskPartially(task, _partialNativeReward, _partialReward);
 
         emit BudgetChanged(_taskId);
         emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
+    }
+
+    // To save any native funds stuck in the escrow
+    function rescueNative(uint256 _taskId, address payable to, uint256 amount) external {
+        Task storage task = _getTask(_taskId);
+        _ensureTaskClosed(task);
+        _ensureSenderIsManager(task);
+
+        task.escrow.transferNative(to, amount);
+    }
+
+    // To save any funds stuck in the escrow
+    function rescue(uint256 _taskId, IERC20 token, address to, uint256 amount) external {
+        Task storage task = _getTask(_taskId);
+        _ensureTaskClosed(task);
+        _ensureSenderIsManager(task);
+
+        task.escrow.transfer(token, to, amount);
     }
 
     function disable() external {
