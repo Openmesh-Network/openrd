@@ -18,16 +18,8 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     /// @notice The base escrow contract that will be cloned for every task.
     address internal immutable escrowImplementation;
 
-    /// @notice This address has the power to disable the contract, in case an exploit is discovered.
-    address private disabler;
-
-    error Disabled();
-    error NotDisabled();
-    error NotDisabler();
-
     constructor() OpenmeshENSReverseClaimable() {
         escrowImplementation = address(new Escrow());
-        disabler = OPENMESH_ADMIN;
     }
 
     /// @inheritdoc ITasks
@@ -63,8 +55,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         ERC20Transfer[] calldata _budget,
         PreapprovedApplication[] calldata _preapprove
     ) external payable returns (uint256 taskId) {
-        _ensureNotDisabled();
-
         taskId = taskCounter++;
         Task storage task = tasks[taskId];
         task.metadata = _metadata;
@@ -74,8 +64,9 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         task.escrow = escrow;
 
         // Gas optimization
+        uint96 msgValue = _toUint96(msg.value);
         if (msg.value != 0) {
-            task.nativeBudget = _toUint96(msg.value);
+            task.nativeBudget = msgValue;
         }
 
         // Gas optimization
@@ -105,9 +96,7 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         // Default values are already correct (save gas)
         // task.state = TaskState.Open;
 
-        emit TaskCreated(
-            taskId, _metadata, _deadline, _manager, _disputeManager, msg.sender, _toUint96(msg.value), _budget, escrow
-        );
+        emit TaskCreated(taskId, _metadata, _deadline, _manager, _disputeManager, msg.sender, msgValue, _budget, escrow);
 
         // Gas optimization
         if (_preapprove.length != 0) {
@@ -138,7 +127,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         NativeReward[] calldata _nativeReward,
         Reward[] calldata _reward
     ) external returns (uint32 applicationId) {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsOpen(task);
         _ensureRewardEndsWithNextToken(_reward);
@@ -175,12 +163,11 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function acceptApplications(uint256 _taskId, uint32[] calldata _applicationIds) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsOpen(task);
         _ensureSenderIsManager(task);
 
-        for (uint256 i; i < _applicationIds.length;) {
+        for (uint32 i; i < _applicationIds.length;) {
             _ensureApplicationExists(task, _applicationIds[i]);
 
             Application storage application = task.applications[_applicationIds[i]];
@@ -203,7 +190,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function takeTask(uint256 _taskId, uint32 _applicationId) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsOpen(task);
         _ensureApplicationExists(task, _applicationId);
@@ -220,7 +206,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function createSubmission(uint256 _taskId, string calldata _metadata) external returns (uint8 submissionId) {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
         _ensureSenderIsExecutor(task);
@@ -239,7 +224,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         SubmissionJudgement _judgement,
         string calldata _feedback
     ) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
         _ensureSenderIsManager(task);
@@ -261,7 +245,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function cancelTask(uint256 _taskId, string calldata _metadata) external returns (uint8 cancelTaskRequestId) {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
@@ -286,7 +269,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function acceptRequest(uint256 _taskId, RequestType _requestType, uint8 _requestId, bool _execute) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
         _ensureSenderIsExecutor(task);
@@ -315,7 +297,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function executeRequest(uint256 _taskId, RequestType _requestType, uint8 _requestId) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
 
@@ -338,7 +319,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function extendDeadline(uint256 _taskId, uint64 _extension) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
@@ -350,7 +330,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function increaseBudget(uint256 _taskId, uint96[] calldata _increase) external payable {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
@@ -368,7 +347,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         uint96[] calldata _nativeIncrease,
         uint88[] calldata _increase
     ) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
@@ -396,7 +374,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function editMetadata(uint256 _taskId, string calldata _newMetadata) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsOpen(task);
         _ensureSenderIsManager(task);
@@ -408,7 +385,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
 
     /// @inheritdoc ITasks
     function transferManagement(uint256 _taskId, address _newManager) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskNotClosed(task);
         _ensureSenderIsManager(task);
@@ -424,7 +400,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         uint96[] calldata _partialNativeReward,
         uint88[] calldata _partialReward
     ) external {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
         _ensureSenderIsDisputeManager(task);
@@ -440,7 +415,6 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
     function partialPayment(uint256 _taskId, uint96[] calldata _partialNativeReward, uint88[] calldata _partialReward)
         external
     {
-        _ensureNotDisabled();
         Task storage task = _getTask(_taskId);
         _ensureTaskIsTaken(task);
         _ensureSenderIsManager(task);
@@ -460,7 +434,7 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         task.escrow.transferNative(to, amount);
     }
 
-    // To save any funds stuck in the escrow
+    // To save any erc20 funds stuck in the escrow
     function rescue(uint256 _taskId, IERC20 token, address to, uint256 amount) external {
         Task storage task = _getTask(_taskId);
         _ensureTaskClosed(task);
@@ -469,43 +443,11 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         task.escrow.transfer(token, to, amount);
     }
 
-    function disable() external {
-        _ensureSenderIsDisabler();
-        disabler = address(0);
-    }
-
-    // Ideally you are able to transfer the task to a new contract, but that requires adding this to the escrow contract.
-    // I prefer this, to keep the escrow contract as simple as possible.
-    function refund(uint256 _taskId) external {
-        _ensureDisabled();
-        Task storage task = _getTask(_taskId);
-        _ensureTaskNotClosed(task);
-        _refundCreator(task);
-    }
-
     function _getTask(uint256 _taskId) internal view returns (Task storage task) {
         if (_taskId >= taskCounter) {
             revert TaskDoesNotExist();
         }
 
         task = tasks[_taskId];
-    }
-
-    function _ensureNotDisabled() internal view {
-        if (disabler == address(0)) {
-            revert Disabled();
-        }
-    }
-
-    function _ensureDisabled() internal view {
-        if (disabler != address(0)) {
-            revert NotDisabled();
-        }
-    }
-
-    function _ensureSenderIsDisabler() internal view {
-        if (msg.sender != disabler) {
-            revert NotDisabler();
-        }
     }
 }

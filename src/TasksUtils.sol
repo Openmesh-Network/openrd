@@ -32,7 +32,7 @@ abstract contract TasksUtils is TasksEnsure {
         }
 
         offchainTask.applications = new OffChainApplication[](task.applicationCount);
-        for (uint8 i; i < offchainTask.applications.length;) {
+        for (uint32 i; i < offchainTask.applications.length;) {
             Application storage application = task.applications[i];
             offchainTask.applications[i].metadata = application.metadata;
             offchainTask.applications[i].applicant = application.applicant;

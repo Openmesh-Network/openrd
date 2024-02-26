@@ -30,22 +30,28 @@ contract Escrow {
     /// @param token The ERC20 contract address.
     /// @param to The address to recieve the tokens.
     /// @param amount The amount of ERC20 token to receive.
+    /// @dev Wont do anything if amount is 0.
     function transfer(IERC20 token, address to, uint256 amount) external {
         if (msg.sender != owner) {
             revert NotOwner();
         }
 
-        token.safeTransfer(to, amount);
+        if (amount != 0) {
+            token.safeTransfer(to, amount);
+        }
     }
 
     /// @notice Transfers a certain amount of native currency to a given address. Can only be called by the owner.
     /// @param to The address to recieve the currency.
     /// @param amount The amount of native currency to receive.
+    /// @dev Wont do anything if amount is 0.
     function transferNative(address payable to, uint256 amount) external {
         if (msg.sender != owner) {
             revert NotOwner();
         }
 
-        to.transfer(amount);
+        if (amount != 0) {
+            to.transfer(amount);
+        }
     }
 }
