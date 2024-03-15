@@ -1,5 +1,5 @@
 import { Address, Deployer } from "../web3webdeploy/types";
-import { DeployTasksSettings, deployTasks } from "./tasks/Tasks";
+import { DeployTasksSettings, deployTasks } from "./internal/Tasks";
 
 export interface TasksDeploymentSettings {
   tasksSettings: DeployTasksSettings;
