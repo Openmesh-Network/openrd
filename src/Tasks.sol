@@ -425,22 +425,35 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         emit PartialPayment(_taskId, _partialNativeReward, _partialReward);
     }
 
-    // To save any native funds stuck in the escrow
+    /// @notice To save any native funds stuck in the escrow
     function rescueNative(uint256 _taskId, address payable to, uint256 amount) external {
-        Task storage task = _getTask(_taskId);
-        _ensureTaskClosed(task);
-        _ensureSenderIsManager(task);
+        if (_taskId == type(uint256).max && msg.sender == OPENMESH_ADMIN) {
+            // Save funds from this contract itself (done by Openmesh community)
+            (bool success,) = to.call{value: amount}("");
+            if (!success) revert NativeTransferFailed();
+        } else {
+            // Save funds from the escrow contract of a task (done by the task manager)
+            Task storage task = _getTask(_taskId);
+            _ensureTaskClosed(task);
+            _ensureSenderIsManager(task);
 
-        task.escrow.transferNative(to, amount);
+            task.escrow.transferNative(to, amount);
+        }
     }
 
-    // To save any erc20 funds stuck in the escrow
+    /// @notice To save any erc20 funds stuck in the escrow
     function rescue(uint256 _taskId, IERC20 token, address to, uint256 amount) external {
-        Task storage task = _getTask(_taskId);
-        _ensureTaskClosed(task);
-        _ensureSenderIsManager(task);
+        if (_taskId == type(uint256).max && msg.sender == OPENMESH_ADMIN) {
+            // Save funds from this contract itself (done by Openmesh community)
+            token.transfer(to, amount);
+        } else {
+            // Save funds from the escrow contract of a task (done by the task manager)
+            Task storage task = _getTask(_taskId);
+            _ensureTaskClosed(task);
+            _ensureSenderIsManager(task);
 
-        task.escrow.transfer(token, to, amount);
+            task.escrow.transfer(token, to, amount);
+        }
     }
 
     function _getTask(uint256 _taskId) internal view returns (Task storage task) {

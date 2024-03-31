@@ -9,6 +9,7 @@ contract Escrow {
 
     error AlreadyInitialized();
     error NotOwner();
+    error NativeTransferFailed();
 
     address internal owner;
 
@@ -51,7 +52,11 @@ contract Escrow {
         }
 
         if (amount != 0) {
-            to.transfer(amount);
+            // Use call instead of transfer for correct gas estimation to smart contracts
+            (bool succes,) = to.call{value: amount}("");
+            if (!succes) {
+                revert NativeTransferFailed();
+            }
         }
     }
 }
