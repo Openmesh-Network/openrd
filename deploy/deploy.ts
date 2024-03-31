@@ -15,7 +15,12 @@ export async function deploy(
   settings?: TasksDeploymentSettings
 ): Promise<TasksDeployment> {
   if (settings?.forceRedeploy !== undefined && !settings.forceRedeploy) {
-    return await deployer.loadDeployment({ deploymentName: "latest.json" });
+    const existingDeployment = await deployer.loadDeployment({
+      deploymentName: "latest.json",
+    });
+    if (existingDeployment !== undefined) {
+      return existingDeployment;
+    }
   }
 
   const tasks = await deployTasks(deployer, settings?.tasksSettings ?? {});

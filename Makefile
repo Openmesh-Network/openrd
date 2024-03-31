@@ -8,15 +8,16 @@ deploy:
 	${MAKE} --directory=./web3webdeploy deploy
 .PHONY: deploy
 
-# Sends 100 ETH to ADDRESS (example usage: make fundme ADDRESS="0xaF7E68bCb2Fc7295492A00177f14F59B92814e70")
+# Sends 100 ETH to ADDRESS (example usage: make local-fund ADDRESS="0xaF7E68bCb2Fc7295492A00177f14F59B92814e70")
 local-fund:
 	cast send --value 100000000000000000000 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 ${ADDRESS}
 .PHONY: local-fund
 
-# Update all submodules (and submodules of submodules of submodules etc.) to the latest version
-# This will by default get the latest head or whatever branch is specific in .gitmodules
+# Update all submodules to the latest version (as specified by the branch in .gitmodules, otherwise latest of default branch)
+# It will then checkout any updates done to submodules in those projects (but will not update them to the latest remote version, just the commit specified in the project itself).
 update:
-	git submodule update --init --recursive --remote
+	git submodule update --remote
+	git submodule foreach "git submodule update --init --recursive --checkout"
 	${MAKE} clean
 .PHONY: update
 
@@ -32,7 +33,7 @@ template-update:
 	git remote add template https://github.com/Plopmenz/foundry-template.git
 	git fetch template
 	git show template/main:template.version > newest.version
-	git cherry-pick --no-commit template/main~$$(expr $$(cat newest.version) - $$(cat template.version)) template/main || true
+	git cherry-pick --no-commit template/main~$$(expr $$(cat newest.version) - $$(cat template.version) - 1) template/main || true
 	rm newest.version
 	git remote remove template
 	${MAKE} clean
