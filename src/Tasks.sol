@@ -430,7 +430,9 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         if (_taskId == type(uint256).max && msg.sender == OPENMESH_ADMIN) {
             // Save funds from this contract itself (done by Openmesh community)
             (bool success,) = to.call{value: amount}("");
-            if (!success) revert NativeTransferFailed();
+            if (!success) {
+                revert NativeTransferFailed();
+            }
         } else {
             // Save funds from the escrow contract of a task (done by the task manager)
             Task storage task = _getTask(_taskId);
