@@ -73,7 +73,7 @@ contract Tasks is TasksUtils, OpenmeshENSReverseClaimable {
         if (_budget.length != 0) {
             task.budgetCount = _toUint8(_budget.length);
             for (uint8 i; i < uint8(_budget.length);) {
-                // Please mind that this external user specified "token contract" could be used for reentrancies. As all funds are held in seperate escrows (this contract has none), this should not be an issue.
+                // Please mind that this external user specified "token contract" could be used for reentrancies. As all funds are held in separate escrows (this contract has none), this should not be an issue.
                 // Possible "attack": create an application, accept it and take the task inside the safeTransferFrom call, the preapproved application can be used to overwrite the reward (although limited by the budget).
                 // This all happens in a single transaction, which means realistically the proposer could achieve the same result anyhow.
                 _budget[i].tokenContract.safeTransferFrom(msg.sender, address(escrow), _budget[i].amount);

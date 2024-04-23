@@ -35,7 +35,7 @@ interface ITasks {
     error NativeTransferFailed();
     error ERC1167FailedCreateClone();
 
-    // The budget here repesents the call of the funder to the escrow, the actual value in the escrow (actual budget) might differ in case of transfer fees / rewards.
+    // The budget here represents the call of the funder to the escrow, the actual value in the escrow (actual budget) might differ in case of transfer fees / rewards.
     event TaskCreated(
         uint256 indexed taskId,
         string metadata,
@@ -113,12 +113,12 @@ interface ITasks {
     /// @param reward How much rewards the applicant wants for completion.
     struct Application {
         string metadata;
-        // Storage block seperator
+        // Storage block separator
         address applicant;
         bool accepted;
         uint8 nativeRewardCount;
         uint8 rewardCount;
-        // Storage block seperator
+        // Storage block separator
         mapping(uint8 => NativeReward) nativeReward;
         mapping(uint8 => Reward) reward;
     }
@@ -155,7 +155,9 @@ interface ITasks {
     }
 
     // This is for future expansion of the request system
-    enum RequestType {CancelTask}
+    enum RequestType {
+        CancelTask
+    }
 
     /// @notice A container for shared request information.
     /// @param accepted If the request was accepted.
@@ -190,19 +192,19 @@ interface ITasks {
     /// @param manager Who has the permission to manage the task.
     /// @param state Current state the task is in.
     /// @param applications Applications to take the job.
-    /// @param executorApplication Index of the application that will execture the task.
+    /// @param executorApplication Index of the application that will execute the task.
     /// @param submissions Submission made to finish the task.
     struct Task {
         string metadata;
-        // Storage block seperator
+        // Storage block separator
         uint64 deadline;
         Escrow escrow;
-        // Storage block seperator
+        // Storage block separator
         uint96 nativeBudget;
         address creator;
-        // Storage block seperator
+        // Storage block separator
         address disputeManager;
-        // Storage block seperator
+        // Storage block separator
         address manager;
         TaskState state;
         uint32 executorApplication;
@@ -210,7 +212,7 @@ interface ITasks {
         uint32 applicationCount;
         uint8 submissionCount;
         uint8 cancelTaskRequestCount;
-        // Storage block seperator
+        // Storage block separator
         mapping(uint8 => ERC20Transfer) budget;
         mapping(uint32 => Application) applications;
         mapping(uint8 => Submission) submissions;
@@ -321,7 +323,7 @@ interface ITasks {
     /// @param _execute If the request should also be executed in this transaction.
     function acceptRequest(uint256 _taskId, RequestType _requestType, uint8 _requestId, bool _execute) external;
 
-    /// @notice Exectued an accepted request, allows anyone to pay for the gas costs of the execution.
+    /// @notice Executes an accepted request, allows anyone to pay for the gas costs of the execution.
     /// @param _taskId Id of the task.
     /// @param _requestType What kind of request it is.
     /// @param _requestId Id of the request.

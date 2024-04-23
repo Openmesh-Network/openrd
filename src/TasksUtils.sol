@@ -82,7 +82,7 @@ abstract contract TasksUtils is TasksEnsure {
         mapping(uint8 => NativeReward) storage _nativeReward,
         mapping(uint8 => Reward) storage _reward
     ) internal view {
-        // Gas optimzation
+        // Gas optimization
         if (_nativeLength != 0) {
             uint256 needed;
             for (uint8 i; i < _nativeLength;) {
@@ -100,7 +100,7 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
+        // Gas optimization
         if (_length != 0) {
             uint8 j;
             ERC20Transfer memory erc20Transfer = task.budget[0];
@@ -135,7 +135,7 @@ abstract contract TasksUtils is TasksEnsure {
         NativeReward[] calldata _nativeReward,
         Reward[] calldata _reward
     ) internal {
-        // Gas optimzation
+        // Gas optimization
         if (_nativeReward.length != 0) {
             application.nativeRewardCount = _toUint8(_nativeReward.length);
 
@@ -156,7 +156,7 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
+        // Gas optimization
         if (_reward.length != 0) {
             application.rewardCount = _toUint8(_reward.length);
 
@@ -189,7 +189,7 @@ abstract contract TasksUtils is TasksEnsure {
     }
 
     function _increaseNativeBudget(Task storage task) internal {
-        // Gas optimzation
+        // Gas optimization
         if (msg.value != 0) {
             (bool success,) = address(task.escrow).call{value: msg.value}("");
             if (!success) {
@@ -202,7 +202,7 @@ abstract contract TasksUtils is TasksEnsure {
 
     function _increaseBudget(Task storage task, uint96[] calldata _increase) internal {
         for (uint8 i; i < uint8(_increase.length);) {
-            // Gas optimzation
+            // Gas optimization
             if (_increase[i] != 0) {
                 ERC20Transfer storage transfer = task.budget[i];
                 transfer.tokenContract.safeTransferFrom(msg.sender, address(task.escrow), _increase[i]);
@@ -222,12 +222,12 @@ abstract contract TasksUtils is TasksEnsure {
         address creator = task.creator;
         Escrow escrow = task.escrow;
 
-        // Gas optimzation
+        // Gas optimization
         uint256 nativeBudget = task.nativeBudget;
         if (nativeBudget != 0) {
             uint96 paidOut;
 
-            // Gas optimzation
+            // Gas optimization
             uint8 nativeRewardCount = executor.nativeRewardCount;
             if (nativeRewardCount != 0) {
                 for (uint8 i; i < nativeRewardCount;) {
@@ -250,10 +250,10 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
+        // Gas optimization
         uint8 budgetCount = task.budgetCount;
         if (budgetCount != 0) {
-            // Gas optimzation
+            // Gas optimization
             uint8 rewardCount = executor.rewardCount;
             uint8 j;
             for (uint8 i; i < budgetCount;) {
@@ -290,12 +290,12 @@ abstract contract TasksUtils is TasksEnsure {
         Escrow escrow = task.escrow;
         address creator = task.creator;
 
-        // Gas optimzation
+        // Gas optimization
         if (task.nativeBudget != 0) {
             escrow.transferNative(payable(creator), task.nativeBudget);
         }
 
-        // Gas optimzation
+        // Gas optimization
         uint8 budgetCount = task.budgetCount;
         if (budgetCount != 0) {
             for (uint8 i; i < budgetCount;) {
@@ -319,7 +319,7 @@ abstract contract TasksUtils is TasksEnsure {
         Application storage executor = task.applications[task.executorApplication];
         Escrow escrow = task.escrow;
 
-        // Gas optimzation
+        // Gas optimization
         uint8 nativeRewardCount = executor.nativeRewardCount;
         if (nativeRewardCount != 0) {
             for (uint8 i; i < nativeRewardCount;) {
@@ -340,7 +340,7 @@ abstract contract TasksUtils is TasksEnsure {
             }
         }
 
-        // Gas optimzation
+        // Gas optimization
         uint8 rewardCount = executor.rewardCount;
         if (rewardCount != 0) {
             uint8 j;

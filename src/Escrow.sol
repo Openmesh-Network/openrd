@@ -29,7 +29,7 @@ contract Escrow {
 
     /// @notice Transfers a certain amount of ERC20 token to a given address. Can only be called by the owner.
     /// @param token The ERC20 contract address.
-    /// @param to The address to recieve the tokens.
+    /// @param to The address to receive the tokens.
     /// @param amount The amount of ERC20 token to receive.
     /// @dev Wont do anything if amount is 0.
     function transfer(IERC20 token, address to, uint256 amount) external {
@@ -43,7 +43,7 @@ contract Escrow {
     }
 
     /// @notice Transfers a certain amount of native currency to a given address. Can only be called by the owner.
-    /// @param to The address to recieve the currency.
+    /// @param to The address to receive the currency.
     /// @param amount The amount of native currency to receive.
     /// @dev Wont do anything if amount is 0.
     function transferNative(address payable to, uint256 amount) external {
@@ -53,8 +53,8 @@ contract Escrow {
 
         if (amount != 0) {
             // Use call instead of transfer for correct gas estimation to smart contracts
-            (bool succes,) = to.call{value: amount}("");
-            if (!succes) {
+            (bool success,) = to.call{value: amount}("");
+            if (!success) {
                 revert NativeTransferFailed();
             }
         }
