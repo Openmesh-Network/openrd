@@ -10,4 +10,4 @@
 	branch = release-v5.0
 [submodule "lib/openmesh-admin"]
 	path = lib/openmesh-admin
-	url = https://github.com/plopmenz/openmesh-admin
+	url = https://github.com/Openmesh-Network/openmesh-admin
