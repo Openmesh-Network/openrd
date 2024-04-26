@@ -1,15 +1,7 @@
-## Foundry Template
+## OpenR&D
 
-This template adds web3webdeploy and the slither analyzer to the base foundry project.
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+The main OpenR&D smart contracts.  
+More information on OpenR&D can be found on [the docs website](https://open-mesh.gitbook.io/l3a-dao-documentation).  
 
 ## Documentation
 
