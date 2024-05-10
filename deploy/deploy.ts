@@ -25,7 +25,7 @@ export async function deploy(
 
   const tasks = await deployTasks(deployer, settings?.tasksSettings ?? {});
 
-  const deployment = {
+  const deployment: TasksDeployment = {
     tasks: tasks,
   };
   await deployer.saveDeployment({
