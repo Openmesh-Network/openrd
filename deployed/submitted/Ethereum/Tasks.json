@@ -1,7 +1,7 @@
 {
   "type": "deployment",
-  "id": "OpenRD_11155111",
-  "batch": "testnet",
+  "id": "Tasks",
+  "batch": "Ethereum",
   "batchIndex": 0,
   "deploymentAddress": "0xDdb23dacd41908C4eAE03982B1c6529252A56b62",
   "constructorArgs": [],
@@ -11,10 +11,10 @@
   "gas": "4349135",
   "from": "0x6b221aA392146E31743E1beB5827e88284B09753",
   "transactionSettings": {
-    "chainId": 11155111,
+    "chainId": 1,
     "nonce": "1",
-    "baseFee": "1500000000",
-    "priorityFee": "1500000000"
+    "baseFee": "8000000000",
+    "priorityFee": "100000000"
   },
   "salt": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000OPENMESH",
   "artifact": {
@@ -1362,7 +1362,7 @@
   },
   "source": "/home/plopmenz/openmesh-smart-contracts/lib/openrd-foundry",
   "submitted": {
-    "transactionHash": "0x13369e8bf19b29664e1e59e764494e82946dad4e6f357139ac092fc442e64495",
-    "date": "2024-04-24T19:49:56.120Z"
+    "transactionHash": "0x005fae4f866f694d4a17dd4454d84e97af65131e144b4bb1b618efebcbb262b7",
+    "date": "2024-04-24T21:32:39.040Z"
   }
 }
